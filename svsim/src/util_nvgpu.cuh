@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 #ifndef UTIL_NVGPU_CUH
-#define UTIL_NVPUG_CUH
+#define UTIL_NVGPU_CUH
 
 #include <stdio.h>
 #include <sys/time.h>
