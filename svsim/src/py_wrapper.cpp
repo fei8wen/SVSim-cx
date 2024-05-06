@@ -54,7 +54,7 @@ PYBIND11_MODULE(libsvsim, m)
 {
     py::class_<Gate>(m, "Gate")
         .def(py::init<enum OP,IdxType,IdxType,IdxType,
-                IdxType,IdxType,ValType,ValType,ValType>());
+                IdxType,IdxType,double,double,double>());
     py::class_<Simulation>(m, "Simulation")
         .def(py::init<IdxType,IdxType>()) //n_qubits, n_gpu
         .def("append", &Simulation::append)

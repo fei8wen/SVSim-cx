@@ -33,13 +33,14 @@
 //Accelerate by AVX512
 //#define USE_AVX512
 
+#include <cuda_fp16.h>
 // ================================= Configurations =====================================
 namespace SVSim 
 {
 //Basic Type for indices, adjust to uint64_t when qubits > 15
 using IdxType = unsigned;
 //Basic Type for value, expect to support half, float and double
-using ValType = double;
+using ValType = __half;
 //Random seed
 #define RAND_SEED time(0)
 //Tile for transposition in the adjoint operation

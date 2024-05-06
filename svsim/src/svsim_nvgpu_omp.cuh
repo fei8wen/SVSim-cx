@@ -24,7 +24,7 @@
 #include <iostream>
 
 #include <cuda.h>
-
+#include <cuda_fp16.h>
 #include "config.hpp"
 
 namespace SVSim
@@ -102,10 +102,10 @@ class Gate
 public:
     Gate(enum OP _op_name, 
          IdxType _qb0, IdxType _qb1, IdxType _qb2, IdxType _qb3, IdxType _qb4, 
-         ValType _theta, ValType _phi, ValType _lambda) : 
+         double _theta, double _phi, double _lambda) : 
         op_name(_op_name),
         qb0(_qb0), qb1(_qb1), qb2(_qb2), qb3(_qb3), qb4(_qb4),
-        theta(_theta), phi(_phi), lambda(_lambda) {}
+        theta(ValType(_theta)), phi(ValType(_phi)), lambda(ValType(_lambda)) {}
 
     ~Gate() {}
 
@@ -172,8 +172,8 @@ public:
     {
         ss << OP_NAMES[op_name] << "(" << qb0 << "," << qb1 << "," 
             << qb2 << "," << qb3 << ","
-            << qb4 << "," << theta << "," 
-            << phi << "," << lambda << ");" << std::endl;
+            << qb4 << "," << __half2float(theta) << "," 
+            << __half2float(phi) << "," << __half2float(lambda) << ");" << std::endl;
     }
     //Gate operation
     func_t op;
@@ -512,7 +512,7 @@ public:
                 if (sv_scan[j]<=r && r<sv_scan[j+1])
                     res_state[i] = j;
         }
-        if ( abs(sv_scan[dim] - 1.0) > ERROR_BAR )
+        if ( __habs(sv_scan[dim] - ValType(1)) > ValType(ERROR_BAR) )
             printf("Sum of probability is far from 1.0 with %lf\n", sv_scan[dim]);
         SAFE_FREE_HOST(sv_scan);
         return res_state;
@@ -531,17 +531,17 @@ public:
 
     // =============================== Standard Gates ===================================
     //3-parameter 2-pulse single qubit gate
-    static Gate* U3(ValType theta, ValType phi, ValType lambda, IdxType m)
+    static Gate* U3(double theta, double phi, double lambda, IdxType m)
     {
         return new Gate(OP::U3, m, 0, 0, 0, 0, theta, phi, lambda);
     }
     //2-parameter 1-pulse single qubit gate
-    static Gate* U2(ValType phi, ValType lambda, IdxType m)
+    static Gate* U2(double phi, double lambda, IdxType m)
     {
         return new Gate(OP::U2, m, 0, 0, 0, 0, 0., phi, lambda);
     }
     //1-parameter 0-pulse single qubit gate
-    static Gate* U1(ValType lambda, IdxType m)
+    static Gate* U1(double lambda, IdxType m)
     {
         return new Gate(OP::U1, m, 0, 0, 0, 0, 0., 0., lambda);
     }
@@ -596,17 +596,17 @@ public:
         return new Gate(OP::TDG, m, 0, 0, 0, 0, 0., 0., 0.);
     }
     //Rotation around X-axis
-    static Gate* RX(ValType theta, IdxType m)
+    static Gate* RX(double theta, IdxType m)
     {
         return new Gate(OP::RX, m, 0, 0, 0, 0, theta, 0., 0.);
     }
     //Rotation around Y-axis
-    static Gate* RY(ValType theta, IdxType m)
+    static Gate* RY(double theta, IdxType m)
     {
         return new Gate(OP::RY, m, 0, 0, 0, 0, theta, 0., 0.);
     }
     //Rotation around Z-axis
-    static Gate* RZ(ValType phi, IdxType m)
+    static Gate* RZ(double phi, IdxType m)
     {
         return new Gate(OP::RZ, m, 0, 0, 0, 0, 0., phi, 0.);
     }
@@ -642,37 +642,37 @@ public:
         return new Gate(OP::CSWAP, l, m, n, 0, 0, 0., 0., 0.);
     }
     //Controlled RX rotation
-    static Gate* CRX(ValType lambda, IdxType m, IdxType n)
+    static Gate* CRX(double lambda, IdxType m, IdxType n)
     {
         return new Gate(OP::CRX, m, n, 0, 0, 0, 0., 0., lambda);
     }
     //Controlled RY rotation
-    static Gate* CRY(ValType lambda, IdxType m, IdxType n)
+    static Gate* CRY(double lambda, IdxType m, IdxType n)
     {
         return new Gate(OP::CRY, m, n, 0, 0, 0, 0., 0., lambda);
     }
     //Controlled RZ rotation
-    static Gate* CRZ(ValType lambda, IdxType m, IdxType n)
+    static Gate* CRZ(double lambda, IdxType m, IdxType n)
     {
         return new Gate(OP::CRZ, m, n, 0, 0, 0, 0., 0., lambda);
     }
     //Controlled phase rotation
-    static Gate* CU1(ValType lambda, IdxType m, IdxType n)
+    static Gate* CU1(double lambda, IdxType m, IdxType n)
     {
         return new Gate(OP::CU1, m, n, 0, 0, 0, 0., 0., lambda);
     }
     //Controlled-U
-    static Gate* CU3(ValType theta, ValType phi, ValType lambda, IdxType m, IdxType n)
+    static Gate* CU3(double theta, double phi, double lambda, IdxType m, IdxType n)
     {
         return new Gate(OP::CU3, m, n, 0, 0, 0, theta, phi, lambda);
     }
     //2-qubit XX rotation
-    static Gate* RXX(ValType theta, IdxType m, IdxType n)
+    static Gate* RXX(double theta, IdxType m, IdxType n)
     {
         return new Gate(OP::RXX, m, n, 0, 0, 0, theta, 0., 0.);
     }
     //2-qubit ZZ rotation
-    static Gate* RZZ(ValType theta, IdxType m, IdxType n)
+    static Gate* RZZ(double theta, IdxType m, IdxType n)
     {
         return new Gate(OP::RZZ, m, n, 0, 0, 0, theta, 0., 0.);
     }
@@ -702,7 +702,7 @@ public:
         return new Gate(OP::C4X, l, m, n, o, p, 0., 0., 0.);
     }
     // =============================== sv_Sim Native Gates ===================================
-    static Gate* R(ValType theta, IdxType m)
+    static Gate* R(double theta, IdxType m)
     {
         return new Gate(OP::R, m, 0, 0, 0, 0, theta, 0., 0.);
     }
@@ -715,7 +715,7 @@ public:
         return new Gate(OP::W, m, 0, 0, 0, 0, 0., 0., 0.);
     }
     //2-qubit YY rotation
-    static Gate* RYY(ValType theta, IdxType m, IdxType n)
+    static Gate* RYY(double theta, IdxType m, IdxType n)
     {
         return new Gate(OP::RYY, m, n, 0, 0, 0, theta, 0., 0.);
     }
@@ -744,7 +744,7 @@ public:
     ValType** sv_real_ptr;
     ValType** sv_imag_ptr;
 
-    ValType gpu_mem;
+    unsigned gpu_mem;
     //hold the CPU-side gates
     vector<Gate*> circuit;
     //for freeing GPU-side gates in clear(), otherwise there can be GPU memory leak
@@ -1042,10 +1042,10 @@ __device__ __inline__ void H_GATE(const Simulation* sim, ValType** sv_real_ptr,
     const ValType el0_imag = sv_imag_ptr[pos0_gid][pos0];
     const ValType el1_real = sv_real_ptr[pos1_gid][pos1]; 
     const ValType el1_imag = sv_imag_ptr[pos1_gid][pos1];
-    sv_real_ptr[pos0_gid][pos0] = S2I*(el0_real + el1_real); 
-    sv_imag_ptr[pos0_gid][pos0] = S2I*(el0_imag + el1_imag);
-    sv_real_ptr[pos1_gid][pos1] = S2I*(el0_real - el1_real);
-    sv_imag_ptr[pos1_gid][pos1] = S2I*(el0_imag - el1_imag);
+    sv_real_ptr[pos0_gid][pos0] = ValType(S2I)*(el0_real + el1_real); 
+    sv_imag_ptr[pos0_gid][pos0] = ValType(S2I)*(el0_imag + el1_imag);
+    sv_real_ptr[pos1_gid][pos1] = ValType(S2I)*(el0_real - el1_real);
+    sv_imag_ptr[pos1_gid][pos1] = ValType(S2I)*(el0_imag - el1_imag);
     OP_TAIL;
 }
 
@@ -1063,10 +1063,10 @@ __device__ __inline__ void SRN_GATE(const Simulation* sim, ValType** sv_real_ptr
     const ValType el0_imag = sv_imag_ptr[pos0_gid][pos0];
     const ValType el1_real = sv_real_ptr[pos1_gid][pos1]; 
     const ValType el1_imag = sv_imag_ptr[pos1_gid][pos1];
-    sv_real_ptr[pos0_gid][pos0] = 0.5*( el0_real + el1_real); 
-    sv_imag_ptr[pos0_gid][pos0] = 0.5*( el0_imag - el1_imag);
-    sv_real_ptr[pos1_gid][pos1] = 0.5*( el0_real + el1_real);
-    sv_imag_ptr[pos1_gid][pos1] = 0.5*(-el0_imag + el1_imag);
+    sv_real_ptr[pos0_gid][pos0] = ValType(0.5)*( el0_real + el1_real); 
+    sv_imag_ptr[pos0_gid][pos0] = ValType(0.5)*( el0_imag - el1_imag);
+    sv_real_ptr[pos1_gid][pos1] = ValType(0.5)*( el0_real + el1_real);
+    sv_imag_ptr[pos1_gid][pos1] = ValType(0.5)*(-el0_imag + el1_imag);
     OP_TAIL;
 }
 
@@ -1136,8 +1136,8 @@ __device__ __inline__ void T_GATE(const Simulation* sim, ValType** sv_real_ptr, 
     OP_HEAD;
     const ValType el1_real = sv_real_ptr[pos1_gid][pos1]; 
     const ValType el1_imag = sv_imag_ptr[pos1_gid][pos1];
-    sv_real_ptr[pos1_gid][pos1] = S2I*(el1_real-el1_imag);
-    sv_imag_ptr[pos1_gid][pos1] = S2I*(el1_real+el1_imag);
+    sv_real_ptr[pos1_gid][pos1] = ValType(S2I)*(el1_real-el1_imag);
+    sv_imag_ptr[pos1_gid][pos1] = ValType(S2I)*(el1_real+el1_imag);
     OP_TAIL;
 }
 
@@ -1151,8 +1151,8 @@ __device__ __inline__ void TDG_GATE(const Simulation* sim, ValType** sv_real_ptr
     OP_HEAD;
     const ValType el1_real = sv_real_ptr[pos1_gid][pos1]; 
     const ValType el1_imag = sv_imag_ptr[pos1_gid][pos1];
-    sv_real_ptr[pos1_gid][pos1] = S2I*( el1_real+el1_imag);
-    sv_imag_ptr[pos1_gid][pos1] = S2I*(-el1_real+el1_imag);
+    sv_real_ptr[pos1_gid][pos1] = ValType(S2I)*( el1_real+el1_imag);
+    sv_imag_ptr[pos1_gid][pos1] = ValType(S2I)*(-el1_real+el1_imag);
     OP_TAIL;
 }
 
@@ -1183,8 +1183,8 @@ __device__ __inline__ void D_GATE(const Simulation* sim, ValType** sv_real_ptr, 
 __device__ __inline__ void U1_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
         const ValType lambda, const IdxType qubit)
 {
-    ValType e3_real = cos(lambda);
-    ValType e3_imag = sin(lambda);
+    ValType e3_real = hcos(lambda);
+    ValType e3_imag = hsin(lambda);
     
     OP_HEAD;
     const ValType el0_real = sv_real_ptr[pos0_gid][pos0]; 
@@ -1203,14 +1203,14 @@ __device__ __inline__ void U1_GATE(const Simulation* sim, ValType** sv_real_ptr,
 __device__ __inline__ void U2_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
         const ValType phi, const ValType lambda, const IdxType qubit)
 {
-    ValType e0_real = S2I;
+    ValType e0_real = ValType(S2I);
     ValType e0_imag = 0;
-    ValType e1_real = -S2I*cos(lambda);
-    ValType e1_imag = -S2I*sin(lambda);
-    ValType e2_real = S2I*cos(phi);
-    ValType e2_imag = S2I*sin(phi);
-    ValType e3_real = S2I*cos(phi+lambda);
-    ValType e3_imag = S2I*sin(phi+lambda);
+    ValType e1_real = ValType(-S2I)*hcos(lambda);
+    ValType e1_imag = ValType(-S2I)*hsin(lambda);
+    ValType e2_real = ValType(S2I)*hcos(phi);
+    ValType e2_imag = ValType(S2I)*hsin(phi);
+    ValType e3_real = ValType(S2I)*hcos(phi+lambda);
+    ValType e3_imag = ValType(S2I)*hsin(phi+lambda);
     C1_GATE(sim, sv_real_ptr, sv_imag_ptr, e0_real, e0_imag, e1_real, e1_imag,
             e2_real, e2_imag, e3_real, e3_imag, qubit);
 }
@@ -1221,14 +1221,14 @@ __device__ __inline__ void U3_GATE(const Simulation* sim, ValType** sv_real_ptr,
          const ValType theta, const ValType phi, 
          const ValType lambda, const IdxType qubit)
 {
-    ValType e0_real = cos(theta/2.);
+    ValType e0_real = hcos(theta/ValType(2));
     ValType e0_imag = 0;
-    ValType e1_real = -cos(lambda)*sin(theta/2.);
-    ValType e1_imag = -sin(lambda)*sin(theta/2.);
-    ValType e2_real = cos(phi)*sin(theta/2.);
-    ValType e2_imag = sin(phi)*sin(theta/2.);
-    ValType e3_real = cos(phi+lambda)*cos(theta/2.);
-    ValType e3_imag = sin(phi+lambda)*cos(theta/2.);
+    ValType e1_real = -hcos(lambda)*hsin(theta/ValType(2));
+    ValType e1_imag = -hsin(lambda)*hsin(theta/ValType(2));
+    ValType e2_real = hcos(phi)*hsin(theta/ValType(2));
+    ValType e2_imag = hsin(phi)*hsin(theta/ValType(2));
+    ValType e3_real = hcos(phi+lambda)*hcos(theta/ValType(2));
+    ValType e3_imag = hsin(phi+lambda)*hcos(theta/ValType(2));
     C1_GATE(sim, sv_real_ptr, sv_imag_ptr, e0_real, e0_imag, e1_real, e1_imag,
             e2_real, e2_imag, e3_real, e3_imag, qubit);
 }
@@ -1238,8 +1238,8 @@ __device__ __inline__ void U3_GATE(const Simulation* sim, ValType** sv_real_ptr,
 __device__ __inline__ void RX_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const ValType theta, const IdxType qubit)
 {
-    ValType rx_real = cos(theta/2.0);
-    ValType rx_imag = -sin(theta/2.0);
+    ValType rx_real = hcos(theta/ValType(2));
+    ValType rx_imag = -hsin(theta/ValType(2));
     OP_HEAD;
     const ValType el0_real = sv_real_ptr[pos0_gid][pos0]; 
     const ValType el0_imag = sv_imag_ptr[pos0_gid][pos0];
@@ -1257,10 +1257,10 @@ __device__ __inline__ void RX_GATE(const Simulation* sim, ValType** sv_real_ptr,
 __device__ __inline__ void RY_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
         const ValType theta, const IdxType qubit)
 {
-    ValType e0_real = cos(theta/2.0);
-    ValType e1_real = -sin(theta/2.0);
-    ValType e2_real = sin(theta/2.0);
-    ValType e3_real = cos(theta/2.0);
+    ValType e0_real = hcos(theta/ValType(2));
+    ValType e1_real = -hsin(theta/ValType(2));
+    ValType e2_real = hsin(theta/ValType(2));
+    ValType e3_real = hcos(theta/ValType(2));
 
     OP_HEAD;
     const ValType el0_real = sv_real_ptr[pos0_gid][pos0]; 
@@ -1325,9 +1325,9 @@ __device__ __inline__ void CH_GATE(const Simulation* sim, ValType** sv_real_ptr,
 __device__ __inline__ void CRZ_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
         const ValType lambda, const IdxType a, const IdxType b)
 {
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/2, b);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/ValType(2), b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a, b);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/2, b);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/ValType(2), b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a, b);
 }
 
@@ -1336,11 +1336,11 @@ __device__ __inline__ void CRZ_GATE(const Simulation* sim, ValType** sv_real_ptr
 __device__ __inline__ void CU1_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
         const ValType lambda, const IdxType a, const IdxType b)
 {
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/2, a);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/ValType(2), a);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a, b);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/2, b);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/ValType(2), b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a, b);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/2, b);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/ValType(2), b);
 }
 
 //============== CU3 Gate ================
@@ -1349,9 +1349,9 @@ __device__ __inline__ void CU3_GATE(const Simulation* sim, ValType** sv_real_ptr
         const ValType theta, const ValType phi, const ValType lambda, 
         const IdxType c, const IdxType t)
 {
-    ValType temp1 = (lambda-phi)/2;
-    ValType temp2 = theta/2;
-    ValType temp3 = -(phi+lambda)/2;
+    ValType temp1 = (lambda-phi)/ValType(2);
+    ValType temp2 = theta/ValType(2);
+    ValType temp3 = -(phi+lambda)/ValType(2);
     U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -temp3, c);
     U1_GATE(sim, sv_real_ptr, sv_imag_ptr, temp1, t);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, c, t);
@@ -1404,11 +1404,11 @@ __device__ __inline__ void CSWAP_GATE(const Simulation* sim, ValType** sv_real_p
 __device__ __inline__ void CRX_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const ValType lambda, const IdxType a, const IdxType b)
 {
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/2, b);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(2), b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
-    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/2,0,0,b);
+    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/ValType(2),0,0,b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
-    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/2,-PI/2,0,b);
+    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/ValType(2), ValType(-PI)/ValType(2),0,b);
 }
  
 //============== CRY Gate ================
@@ -1416,9 +1416,9 @@ __device__ __inline__ void CRX_GATE(const Simulation* sim, ValType** sv_real_ptr
 __device__ __inline__ void CRY_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const ValType lambda, const IdxType a, const IdxType b)
 {
-    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/2,0,0,b);
+    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, lambda/ValType(2),0,0,b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
-    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/2,0,0,b);
+    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, -lambda/ValType(2),0,0,b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
 }
  
@@ -1427,13 +1427,13 @@ __device__ __inline__ void CRY_GATE(const Simulation* sim, ValType** sv_real_ptr
 __device__ __inline__ void RXX_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const ValType theta, const IdxType a, const IdxType b)
 {
-    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/2,theta,0,a);
+    U3_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(2),theta,0,a);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
     U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -theta,b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, b);
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI,PI-theta,a);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI),ValType(PI)-theta,a);
 }
  
 //============== RZZ Gate ================
@@ -1451,15 +1451,15 @@ __device__ __inline__ void RZZ_GATE(const Simulation* sim, ValType** sv_real_ptr
 __device__ __inline__ void RCCX_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const IdxType a, const IdxType b, const IdxType c)
 {
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,PI,c);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,c);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,ValType(PI),c);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),c);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,c);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,c);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),c);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,c);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,c);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),c);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,c);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,c);
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,PI,c);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),c);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,ValType(PI),c);
 }
  
 //============== RC3X Gate ================
@@ -1467,24 +1467,24 @@ __device__ __inline__ void RCCX_GATE(const Simulation* sim, ValType** sv_real_pt
 __device__ __inline__ void RC3X_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const IdxType a, const IdxType b, const IdxType c, const IdxType d)
 {
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,PI,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,d);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,ValType(PI),d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, c,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,d);
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,PI,d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),d);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,ValType(PI),d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,d);
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,PI,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),d);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,ValType(PI),d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, c,d);
-    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,d);
-    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,PI,d);
+    U1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),d);
+    U2_GATE(sim, sv_real_ptr, sv_imag_ptr, 0,ValType(PI),d);
 }
  
 //============== C3X Gate ================
@@ -1493,66 +1493,66 @@ __device__ __inline__ void C3X_GATE(const Simulation* sim, ValType** sv_real_ptr
        const IdxType a, const IdxType b, const IdxType c, const IdxType d)
 {
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,a,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),a,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,b,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),b,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,b,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),b,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/4,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(4),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
 }
  
 //============== C3SQRTX Gate ================
 //3-controlled sqrt(X) gate, this equals the C3X gate where the CU1
-//rotations are -PI/8 not -PI/4
+//rotations are ValType(-PI)/ValType(8) not ValType(-PI)/ValType(4)
 __device__ __inline__ void C3SQRTX_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const IdxType a, const IdxType b, const IdxType c, const IdxType d)
 {
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/8,a,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(8),a,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/8,b,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(8),b,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/8,b,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(8),b,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/8,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(8),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/8,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(8),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, b,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/8,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(8),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,c);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/8,c,d); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(8),c,d); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
 }
  
@@ -1563,18 +1563,18 @@ __device__ __inline__ void C4X_GATE(const Simulation* sim, ValType** sv_real_ptr
        const IdxType d, const IdxType e)
 {
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, e); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/2,d,e); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(2),d,e); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, e);
     C3X_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b,c,d);
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d); 
-    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/4,d,e); 
+    CU1_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(4),d,e); 
     H_GATE(sim, sv_real_ptr, sv_imag_ptr, d);
     C3X_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b,c,d);
     C3SQRTX_GATE(sim, sv_real_ptr, sv_imag_ptr, a,b,c,e);
 }
 
 //============== W Gate ================
-//W gate: e^(-i*pi/4*X)
+//W gate: e^(-i*PI/ValType(4)*X)
 /** W = [s2i    -s2i*i]
         [-s2i*i s2i   ]
 */
@@ -1585,10 +1585,10 @@ __device__ __inline__ void W_GATE(const Simulation* sim, ValType** sv_real_ptr, 
     const ValType el0_imag = sv_imag_ptr[pos0_gid][pos0];
     const ValType el1_real = sv_real_ptr[pos1_gid][pos1]; 
     const ValType el1_imag = sv_imag_ptr[pos1_gid][pos1];
-    sv_real_ptr[pos0_gid][pos0] = S2I * (el0_real + el1_imag);
-    sv_imag_ptr[pos0_gid][pos0] = S2I * (el0_imag - el1_real);
-    sv_real_ptr[pos1_gid][pos1] = S2I * (el0_imag + el1_real);
-    sv_imag_ptr[pos1_gid][pos1] = S2I * (-el0_real + el1_imag);
+    sv_real_ptr[pos0_gid][pos0] = ValType(S2I) * (el0_real + el1_imag);
+    sv_imag_ptr[pos0_gid][pos0] = ValType(S2I) * (el0_imag - el1_real);
+    sv_real_ptr[pos1_gid][pos1] = ValType(S2I) * (el0_imag + el1_real);
+    sv_imag_ptr[pos1_gid][pos1] = ValType(S2I) * (-el0_real + el1_imag);
     OP_TAIL;
 }
 
@@ -1597,13 +1597,13 @@ __device__ __inline__ void W_GATE(const Simulation* sim, ValType** sv_real_ptr, 
 __device__ __inline__ void RYY_GATE(const Simulation* sim, ValType** sv_real_ptr, ValType** sv_imag_ptr,
        const ValType theta, const IdxType a, const IdxType b)
 {
-    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/2, a);
-    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, PI/2, b);
+    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(2), a);
+    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(PI)/ValType(2), b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a, b);
     RZ_GATE(sim, sv_real_ptr, sv_imag_ptr, theta, b);
     CX_GATE(sim, sv_real_ptr, sv_imag_ptr, a, b);
-    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/2, a);
-    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, -PI/2, b);
+    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(2), a);
+    RX_GATE(sim, sv_real_ptr, sv_imag_ptr, ValType(-PI)/ValType(2), b);
 }
  
 
