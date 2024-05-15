@@ -57,6 +57,8 @@ def run_command_with_memory_reporting(command):
         results = {}
         outstr = process.communicate()[0]
         results['sim_time'] = float(get_val(outstr, "sim:", " "))
+        results['gpu_mem'] = get_val(outstr, "mem:", " ")
+        print(results['gpu_mem'])
         results['rss'] = peak_rss
     
     return results
@@ -80,13 +82,16 @@ for cat in qasmbench:
             run_cmd = "python " + app + ".py " + str(n_qubits) + " " + str(core)
             sim_time = 0.0
             rss = 0
+            gpu_mem = 0
             for _ in range(test_time):
                 result = run_command_with_memory_reporting(run_cmd)
                 sim_time += result['sim_time']
                 rss += result['rss']
+                gpu_mem = result['gpu_mem']
             sim_time /=float(test_time)
+            rss /= float(test_time)
             outline = app + ", " + str(n_qubits) + ", " + str(n_basic_gates) + ", " + str(n_cnot_gates)\
-                    + ", " + str(core) + ", " + f"{sim_time:.2f}s" + ", " + f"Peak Memory Footprint (RSS): {rss / (1024 * 1024):.2f} MB"
+                    + ", " + str(core) + ", " + f"{sim_time:.2f} ms" + ", " + f"Peak Memory Footprint. Host: {rss / (1024 * 1024):.2f} MB | GPU: {gpu_mem} MB"
             print(outline)
             fout.write(outline+"\n")
 

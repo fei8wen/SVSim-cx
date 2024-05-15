@@ -197,14 +197,14 @@ public:
     Simulation(IdxType _n_qubits, IdxType _n_gpus) 
         : n_qubits(_n_qubits), 
         n_gpus(_n_gpus),
-        dim((IdxType)1<<(n_qubits)), 
+        dim(1<<(n_qubits)), 
         half_dim((IdxType)1<<(n_qubits-1)),
         gpu_mem(0), 
         n_gates(0), 
         gpu_scale(floor(log((double)_n_gpus+0.5)/log(2.0))),
         lg2_m_gpu(n_qubits-gpu_scale),
         m_gpu((IdxType)1<<(lg2_m_gpu)),
-        sv_size(dim*(IdxType)sizeof(ValType)),
+        sv_size(dim*sizeof(ValType)),
         sv_size_per_gpu(sv_size/n_gpus),
         circuit_gpu(NULL),
         sim_gpu(NULL)
@@ -464,7 +464,7 @@ public:
         printf("\n============== SV-Sim: NVIDIA-GPU-OMP ===============\n");
         printf("nqubits:%d, ngates:%d, ncores:%d, sim:%.3lf ms, mem:%.3lf MB, mem_per_gpu:%.3lf MB\n",
                 n_qubits, n_gates, n_gpus,
-                avg_sim_time, gpu_mem/1024/1024, gpu_mem/1024/1024/n_gpus);
+                avg_sim_time, (double)gpu_mem/(double)1024.0/(double)1024.0, double(gpu_mem)/1024.0/1024.0/(float)n_gpus);
         printf("=======================================================\n");
 #endif
 
@@ -727,13 +727,13 @@ public:
     // gpu_scale is 2^x of the number of GPUs, e.g., with 8 GPUs the gpu_scale is 3 (2^3=8)
     const IdxType gpu_scale;
     const IdxType n_gpus;
-    const IdxType dim;
-    const IdxType half_dim;
+    const unsigned long long dim;
+    const unsigned long long half_dim;
     const IdxType lg2_m_gpu;
     const IdxType m_gpu;
 
-    const IdxType sv_size;
-    const IdxType sv_size_per_gpu;
+    const unsigned long long sv_size;
+    const unsigned long long sv_size_per_gpu;
 
     IdxType n_gates;
     //CPU arrays
@@ -744,7 +744,7 @@ public:
     ValType** sv_real_ptr;
     ValType** sv_imag_ptr;
 
-    unsigned gpu_mem;
+    unsigned long long gpu_mem;
     //hold the CPU-side gates
     vector<Gate*> circuit;
     //for freeing GPU-side gates in clear(), otherwise there can be GPU memory leak

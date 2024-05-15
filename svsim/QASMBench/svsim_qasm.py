@@ -328,7 +328,7 @@ def parse(infile, mainfile):
         i = i+1
     s = "\nsim.upload()\n"
     s += "sim.run()\n"
-    #s += "sim.measure(1)\n"
+    s += "sim.measure(10)\n"
     outfile.write(s)
 
 
