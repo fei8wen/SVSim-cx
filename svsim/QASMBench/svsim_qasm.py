@@ -329,6 +329,7 @@ def parse(infile, mainfile):
     s = "\nsim.upload()\n"
     s += "sim.run()\n"
     s += "sim.measure(10)\n"
+#    s += "sim.print_res_sv()\n"
     outfile.write(s)
 
 
@@ -345,7 +346,7 @@ svfile = open(args.output, "w")
 
 svfile.write("import sys\n")
 
-svfile.write("sys.path.insert(0,'../../../build/')\n")
+svfile.write("sys.path.insert(0,'../../../QASMBench/')\n")
 
 
 svfile.write("import libsvsim as svsim\n\n")

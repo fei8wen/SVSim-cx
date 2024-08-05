@@ -62,6 +62,7 @@ PYBIND11_MODULE(libsvsim, m)
         .def("clear_circuit", &Simulation::clear_circuit)
         .def("run", &Simulation::sim)
         .def("reset", &Simulation::reset)
+        .def("print_res_sv", &Simulation::print_res_sv)
         .def("measure",[](Simulation &s, unsigned repetition) -> py::list{
                 IdxType* m_rtn = s.measure(repetition);
                 py::list rtn;

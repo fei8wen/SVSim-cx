@@ -40,7 +40,7 @@ namespace SVSim
 //Basic Type for indices, adjust to uint64_t when qubits > 15
 using IdxType = unsigned;
 //Basic Type for value, expect to support half, float and double
-using ValType = __half;
+using ValType = double;
 //Random seed
 #define RAND_SEED time(0)
 //Tile for transposition in the adjoint operation
@@ -48,7 +48,7 @@ using ValType = __half;
 //Threads per GPU Thread BLock (Fixed)
 #define THREADS_PER_BLOCK 256
 //Error bar for validation
-#define ERROR_BAR (1e-3)
+#define ERROR_BAR (1e-2)
 // constant value of PI
 #define PI 3.14159265358979323846
 // constant value of 1/sqrt(2)

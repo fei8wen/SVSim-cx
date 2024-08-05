@@ -5,8 +5,8 @@ import psutil
 import time
 #qasmbench = ["small","medium","large"]
 #qasmbench = ["small"]
-qasmbench = ["medium"]
-#qasmbench = ["large"]
+#qasmbench = ["medium"]
+qasmbench = ["large"]
 
 rootpath = os.getcwd()
 converter = "svsim_qasm.py"
@@ -48,7 +48,7 @@ def run_command_with_memory_reporting(command):
             peak_rss = max(peak_rss, current_rss)
 
             # Sleep for a short interval (e.g., 1 second)
-            time.sleep(0.01)
+            time.sleep(0.1)
 
     finally:
         # Ensure the subprocess is terminated
@@ -56,9 +56,9 @@ def run_command_with_memory_reporting(command):
         process.wait()
         results = {}
         outstr = process.communicate()[0]
+        print(outstr)
         results['sim_time'] = float(get_val(outstr, "sim:", " "))
         results['gpu_mem'] = get_val(outstr, "mem:", " ")
-        print(results['gpu_mem'])
         results['rss'] = peak_rss
     
     return results
@@ -73,13 +73,14 @@ for cat in qasmbench:
         os.chdir(os.path.join(rootpath,cat,app))
         convert_cmd = "python " + rootpath + '/' +  converter + " -i " + app + ".qasm"  + " -o " + app + ".py"
         outstr = subprocess.run(convert_cmd, shell=True, stdout=subprocess.PIPE, text=True).stdout
-        #print(outstr)
+        print(outstr)
         n_qubits = int(get_val(outstr, "qubits:", "\n"))
         n_basic_gates = int(get_val(outstr, "basic gates:", "\n"))
         n_cnot_gates = int(get_val(outstr, "cnot gates:", "\n"))
 
         for core in cores:
             run_cmd = "python " + app + ".py " + str(n_qubits) + " " + str(core)
+            print(run_cmd)
             sim_time = 0.0
             rss = 0
             gpu_mem = 0
